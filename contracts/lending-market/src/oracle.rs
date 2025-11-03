@@ -3,7 +3,7 @@
 use crate::error::Error;
 use crate::reflector::{Asset as ReflectorAsset, PriceData, ReflectorClient};
 use crate::types::PRICE_STALENESS_THRESHOLD;
-use soroban_sdk::{Address, Env, String};
+use soroban_sdk::{Address, Env};
 
 /// Get XLM price in USDC from Reflector oracle with validation
 pub fn get_xlm_price(env: &Env, oracle_address: &Address) -> Result<PriceData, Error> {

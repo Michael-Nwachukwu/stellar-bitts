@@ -197,19 +197,19 @@ pub fn execute_liquidation(
 
 /// Batch check which loans are liquidatable
 /// Returns a vector of loan IDs that can be liquidated
-pub fn batch_check_liquidatable(env: &Env, loan_ids: &[u64]) -> Result<Vec<u64>, Error> {
-    let mut liquidatable = Vec::new(env);
+// pub fn batch_check_liquidatable(env: &Env, loan_ids: &[u64]) -> Result<Vec<u64>, Error> {
+//     let mut liquidatable = Vec::new(env);
 
-    for loan_id in loan_ids {
-        if let Ok(loan) = storage::get_loan(env, *loan_id) {
-            if is_liquidatable(env, &loan)? {
-                liquidatable.push_back(*loan_id);
-            }
-        }
-    }
+//     for loan_id in loan_ids {
+//         if let Ok(loan) = storage::get_loan(env, *loan_id) {
+//             if is_liquidatable(env, &loan)? {
+//                 liquidatable.push_back(*loan_id);
+//             }
+//         }
+//     }
 
-    Ok(liquidatable)
-}
+//     Ok(liquidatable)
+// }
 
 /// Batch check which loans are liquidatable (Vec version)
 /// Returns a vector of loan IDs that can be liquidated
@@ -231,7 +231,7 @@ pub fn batch_check_liquidatable_vec(env: &Env, loan_ids: Vec<u64>) -> Result<Vec
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::Loan;
+    // use crate::types::Loan;
 
     #[test]
     fn test_calculate_health_factor() {
