@@ -7,6 +7,8 @@ import { WalletProvider } from "./providers/WalletProvider.tsx";
 import { NotificationProvider } from "./providers/NotificationProvider.tsx";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SidebarProvider } from "./components/ui/sidebar";
+import ClientLayout from "./pages/client-layout";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +25,11 @@ createRoot(document.getElementById("root") as HTMLElement).render(
       <QueryClientProvider client={queryClient}>
         <WalletProvider>
           <BrowserRouter>
-            <App />
+            <SidebarProvider>
+              <ClientLayout>
+                <App />
+              </ClientLayout>
+            </SidebarProvider>
           </BrowserRouter>
         </WalletProvider>
       </QueryClientProvider>
