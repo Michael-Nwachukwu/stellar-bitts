@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import lendingMarket from "@/contracts/lending_market";
 import { useWallet } from "@/hooks/useWallet";
+import { useContractClients } from "../useContractClients";
 
 export interface CancelOfferParams {
   offerId: string; // Offer ID to cancel
@@ -14,7 +14,8 @@ export interface CancelOfferParams {
  */
 export function useCancelOffer() {
   const queryClient = useQueryClient();
-  const { address } = useWallet();
+  const { address, signTransaction } = useWallet();
+  const { lendingMarket } = useContractClients();
 
   return useMutation({
     mutationFn: async (params: CancelOfferParams) => {
@@ -23,12 +24,14 @@ export function useCancelOffer() {
       const offerId = BigInt(params.offerId);
 
       // Cancel offer (returns USDC to lender)
-      const { result } = await lendingMarket.cancel_offer({
+      const cancelTx = await lendingMarket.cancel_offer({
         lender: address,
         offer_id: offerId,
       });
 
-      return result;
+      const sentTx = await cancelTx.signAndSend({ signTransaction });
+      if (!sentTx.result) throw new Error("Failed to cancel offer");
+      return sentTx.result.unwrap();
     },
     onSuccess: async (_, variables) => {
       // Invalidate relevant queries

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import lendingMarket from "@/contracts/lending_market";
 import { useWallet } from "@/hooks/useWallet";
 import { parseUsdc } from "@/lib/lending-utils";
+import { useContractClients } from "../useContractClients";
 
 export interface WithdrawFromOfferParams {
   offerId: string; // Offer ID to withdraw from
@@ -16,7 +16,8 @@ export interface WithdrawFromOfferParams {
  */
 export function useWithdrawFromOffer() {
   const queryClient = useQueryClient();
-  const { address } = useWallet();
+  const { address, signTransaction } = useWallet();
+  const { lendingMarket } = useContractClients();
 
   return useMutation({
     mutationFn: async (params: WithdrawFromOfferParams) => {
@@ -26,13 +27,15 @@ export function useWithdrawFromOffer() {
       const offerId = BigInt(params.offerId);
 
       // Withdraw from offer (returns USDC to lender)
-      const { result } = await lendingMarket.withdraw_from_offer({
+      const withdrawTx = await lendingMarket.withdraw_from_offer({
         lender: address,
         offer_id: offerId,
         amount: withdrawAmount,
       });
 
-      return result;
+      const sentTx = await withdrawTx.signAndSend({ signTransaction });
+      if (!sentTx.result) throw new Error("Failed to withdraw from offer");
+      return sentTx.result.unwrap();
     },
     onSuccess: async (_, variables) => {
       // Invalidate relevant queries

@@ -18,67 +18,38 @@ import {
   useDashboardStats,
   useUserLoansAsBorrowerWithData,
   useUserOffersWithData,
+  useActiveOffersWithData,
 } from "@/hooks/lending";
 import {
   formatUsdc,
   getHealthColor,
   getHealthStatus,
 } from "@/lib/lending-utils";
-
-const TOP_MARKETPLACE_OFFERS = [
-  {
-    id: "1",
-    amountUSDC: 10000,
-    weeklyRate: 5,
-    riskLevel: "low",
-    featured: true,
-    points: 1200,
-    borrowers: 24,
-  },
-  {
-    id: "2",
-    amountUSDC: 25000,
-    weeklyRate: 3.5,
-    riskLevel: "low",
-    featured: false,
-    points: 950,
-    borrowers: 18,
-  },
-  {
-    id: "3",
-    amountUSDC: 50000,
-    weeklyRate: 4.2,
-    riskLevel: "medium",
-    featured: false,
-    points: 850,
-    borrowers: 15,
-  },
-];
-
-const PORTFOLIO_HEALTH = [
-  {
-    title: "Health Score",
-    value: "8.5/10",
-    status: "Excellent",
-    variant: "success" as const,
-  },
-  {
-    title: "Utilization",
-    value: "65%",
-    status: "Optimal",
-    variant: "success" as const,
-  },
-  {
-    title: "Liquidation Risk",
-    value: "Low",
-    status: "Safe",
-    variant: "success" as const,
-  },
-];
+import {
+  useCancelOffer,
+  useWithdrawFromOffer,
+} from "@/hooks/lending/mutations";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useMemo } from "react";
 
 export default function LendingDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("borrows");
+
+  // Modal states
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
 
   // Fetch real data from hooks
   const { data: dashboardData } = useDashboardStats();
@@ -86,6 +57,57 @@ export default function LendingDashboard() {
     useUserLoansAsBorrowerWithData();
   const { data: offers = [], isLoading: isOffersLoading } =
     useUserOffersWithData();
+  const { data: marketplaceOffers = [] } = useActiveOffersWithData();
+
+  // Mutations
+  const cancelOfferMutation = useCancelOffer();
+  const withdrawMutation = useWithdrawFromOffer();
+
+  // Handlers for offer actions
+  const handleWithdrawClick = (offerId: string) => {
+    setSelectedOfferId(offerId);
+    setWithdrawAmount("");
+    setShowWithdrawModal(true);
+  };
+
+  const handleCancelClick = (offerId: string) => {
+    setSelectedOfferId(offerId);
+    setShowCancelModal(true);
+  };
+
+  const handleWithdrawSubmit = () => {
+    void (async () => {
+      if (!selectedOfferId || !withdrawAmount) return;
+      try {
+        await withdrawMutation.mutateAsync({
+          offerId: selectedOfferId,
+          amount: withdrawAmount,
+        });
+        setShowWithdrawModal(false);
+        setWithdrawAmount("");
+      } catch (error) {
+        console.error("Failed to withdraw:", error);
+        alert(
+          `Failed to withdraw: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    })();
+  };
+
+  const handleCancelSubmit = () => {
+    void (async () => {
+      if (!selectedOfferId) return;
+      try {
+        await cancelOfferMutation.mutateAsync({ offerId: selectedOfferId });
+        setShowCancelModal(false);
+      } catch (error) {
+        console.error("Failed to cancel offer:", error);
+        alert(
+          `Failed to cancel offer: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    })();
+  };
 
   // Dashboard stats from real data
   const dashboardStats = [
@@ -116,6 +138,82 @@ export default function LendingDashboard() {
       intent: dashboardData?.isProfit ? "positive" : "negative",
     },
   ];
+
+  // Calculate aggregated security status from user's loans
+  const portfolioHealth = useMemo(() => {
+    if (borrowerLoans.length === 0) {
+      return [
+        {
+          title: "Portfolio Status",
+          value: "N/A",
+          status: "No Active Loans",
+          variant: "success" as const,
+        },
+        {
+          title: "Active Positions",
+          value: "0",
+          status: "Start Borrowing",
+          variant: "success" as const,
+        },
+        {
+          title: "Total Exposure",
+          value: "$0",
+          status: "Safe",
+          variant: "success" as const,
+        },
+      ];
+    }
+
+    // Calculate total borrowed and collateral
+    const totalBorrowed = borrowerLoans.reduce((sum, loan) => {
+      return sum + Number(loan.borrowed_amount || BigInt(0)) / 1e7;
+    }, 0);
+
+    const totalCollateralXLM = borrowerLoans.reduce((sum, loan) => {
+      return sum + Number(loan.collateral_amount || BigInt(0)) / 1e7;
+    }, 0);
+
+    // Simple health estimation based on collateral to debt ratio
+    // Assuming XLM price around $0.10-0.15 for rough calculation
+    const estimatedCollateralValue = totalCollateralXLM * 0.12; // Rough estimate
+    const healthRatio =
+      totalBorrowed > 0 ? estimatedCollateralValue / totalBorrowed : 0;
+
+    let statusValue = "Healthy";
+    let statusLabel = "All Positions Safe";
+    let statusVariant: "success" | "warning" | "destructive" = "success";
+
+    if (healthRatio < 1.2 && healthRatio > 0) {
+      statusValue = "At Risk";
+      statusLabel = "Monitor Closely";
+      statusVariant = "destructive";
+    } else if (healthRatio < 1.5 && healthRatio > 0) {
+      statusValue = "Moderate";
+      statusLabel = "Consider Adding Collateral";
+      statusVariant = "warning";
+    }
+
+    return [
+      {
+        title: "Portfolio Status",
+        value: statusValue,
+        status: statusLabel,
+        variant: statusVariant,
+      },
+      {
+        title: "Active Positions",
+        value: borrowerLoans.length.toString(),
+        status: `${borrowerLoans.length} Active Loan${borrowerLoans.length !== 1 ? "s" : ""}`,
+        variant: "success" as const,
+      },
+      {
+        title: "Total Borrowed",
+        value: `$${totalBorrowed.toFixed(0)}`,
+        status: `${totalCollateralXLM.toFixed(0)} XLM Locked`,
+        variant: "success" as const,
+      },
+    ];
+  }, [borrowerLoans]);
 
   // Convert borrower loans to format expected by UI
   const borrowLoansForUI = borrowerLoans
@@ -149,7 +247,7 @@ export default function LendingDashboard() {
       }}
     >
       <div className="flex flex-col min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 flex-shrink-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6 shrink-0">
           {dashboardStats.map((stat) => (
             <DashboardStat
               key={stat.label}
@@ -360,10 +458,26 @@ export default function LendingDashboard() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleWithdrawClick(
+                                    offer.offer_id.toString(),
+                                  );
+                                }}
+                              >
                                 Withdraw Available
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelClick(offer.offer_id.toString());
+                                }}
+                              >
                                 Cancel Offer
                               </Button>
                             </div>
@@ -377,22 +491,96 @@ export default function LendingDashboard() {
           </TabsContent>
         </Tabs>
 
+        {/* Withdraw Modal */}
+        <Dialog open={showWithdrawModal} onOpenChange={setShowWithdrawModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Withdraw from Offer</DialogTitle>
+              <DialogDescription>
+                Enter the amount of USDC you want to withdraw from your lending
+                offer.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="withdraw-amount">Amount (USDC)</Label>
+                <Input
+                  id="withdraw-amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowWithdrawModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleWithdrawSubmit}
+                disabled={!withdrawAmount || withdrawMutation.isPending}
+              >
+                {withdrawMutation.isPending ? "Withdrawing..." : "Withdraw"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cancel Offer Modal */}
+        <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancel Offer</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to cancel this lending offer? All
+                remaining USDC will be returned to your wallet.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowCancelModal(false)}
+              >
+                No, Keep Offer
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleCancelSubmit}
+                disabled={cancelOfferMutation.isPending}
+              >
+                {cancelOfferMutation.isPending
+                  ? "Cancelling..."
+                  : "Yes, Cancel Offer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 shrink-0 mt-6">
           <RebelsRanking
-            rebels={TOP_MARKETPLACE_OFFERS.map((offer) => ({
-              id: offer.id,
-              name: `${offer.amountUSDC / 1000}k USDC`,
-              handle: `@${offer.weeklyRate}% weekly`,
-              avatar: "/stellar-usdc-offer.jpg",
-              points: offer.borrowers,
-              subtitle:
-                offer.riskLevel === "low"
-                  ? "Low Risk Pool"
-                  : "Medium Risk Pool",
-              featured: offer.featured,
-            }))}
+            rebels={marketplaceOffers
+              .slice(0, 4)
+              .filter((offer) => offer && offer.offer_id !== undefined)
+              .map((offer, index) => {
+                const availableUSDC =
+                  Number(offer.usdc_amount || BigInt(0)) / 1e7;
+                const weeklyRate = (offer.weekly_interest_rate || 0) / 100;
+                return {
+                  id: offer.offer_id.toString(),
+                  name: `${(availableUSDC / 1000).toFixed(1)}k USDC`,
+                  handle: `${weeklyRate}% weekly`,
+                  avatar: "/stellar-usdc-offer.jpg",
+                  points: Number(offer.usdc_amount || BigInt(0)) / 1e7,
+                  subtitle: `${(offer.min_collateral_ratio || 0) / 100}% collateral`,
+                  featured: index === 0,
+                };
+              })}
           />
-          <SecurityStatus statuses={PORTFOLIO_HEALTH} />
+          <SecurityStatus statuses={portfolioHealth} />
         </div>
       </div>
     </DashboardPageLayout>
