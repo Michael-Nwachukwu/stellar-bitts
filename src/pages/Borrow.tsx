@@ -431,7 +431,10 @@ export default function BorrowPage() {
               <Button
                 variant="outline"
                 className="w-full bg-transparent"
-                onClick={() => setShowSuccessModal(false)}
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  void navigate(`/position/${createdLoanId}`);
+                }}
               >
                 View Position Details
               </Button>

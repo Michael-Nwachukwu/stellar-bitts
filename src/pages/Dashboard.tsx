@@ -273,7 +273,7 @@ export default function LendingDashboard() {
           onValueChange={setActiveTab}
           className="w-full flex-1 min-h-0 flex flex-col"
         >
-          <TabsList className="grid w-full grid-cols-2 mb-6 shrink-0">
+          <TabsList className="grid w-full grid-cols-2 mb-6 shrink-0 h-14">
             <TabsTrigger value="borrows">My Borrows</TabsTrigger>
             <TabsTrigger value="lending">My Lending</TabsTrigger>
           </TabsList>
