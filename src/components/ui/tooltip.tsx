@@ -5,18 +5,8 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 import { cn } from "@/lib/utils";
 
-function TooltipProvider({
-  delayDuration = 0,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
-  return (
-    <TooltipPrimitive
-      delayDuration={delayDuration}
-      {...props}
-      data-slot="tooltip-provider"
-    />
-  );
-}
+// Simply re-export the Provider with custom defaults
+const TooltipProvider = TooltipPrimitive.Provider;
 
 function Tooltip({
   ...props
