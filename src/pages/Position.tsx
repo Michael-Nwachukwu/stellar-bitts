@@ -14,29 +14,33 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
-
-const XLM_PRICE_USDC = 0.15;
-const mockLoanData = {
-  id: "5921",
-  lenderId: "GBPD...ABC",
-  borrowerId: "GXYZ...DEF",
-  principalUSDC: 5000,
-  collateralXLM: 50000,
-  weeklyRate: 5,
-  startTime: Date.now() - 604800000,
-  status: "active" as const,
-};
+import {
+  useLoan,
+  useLoanHealth,
+  useXlmPrice,
+  formatXlmPrice,
+  useRepay,
+  useAddCollateral,
+  useWithdrawCollateral,
+} from "@/hooks/lending";
 
 export default function PositionDetailPage() {
   const { loanId } = useParams<{ loanId: string }>();
   const navigate = useNavigate();
 
+  // Fetch real loan data
+  const { data: loan, isLoading: isLoanLoading } = useLoan(loanId);
+  const { data: loanHealth, isLoading: isHealthLoading } =
+    useLoanHealth(loanId);
+  const { data: xlmPriceRaw } = useXlmPrice();
+  const xlmPrice = formatXlmPrice(xlmPriceRaw);
+
+  // Mutations
+  const repayMutation = useRepay();
+  const addCollateralMutation = useAddCollateral();
+  const withdrawCollateralMutation = useWithdrawCollateral();
+
   const [realTimeInterest, setRealTimeInterest] = useState(0);
-  const [collateralValueUSDC, setCollateralValueUSDC] = useState(
-    XLM_PRICE_USDC * mockLoanData.collateralXLM,
-  );
-  const [healthFactor, setHealthFactor] = useState(0);
-  const [liquidationPrice, setLiquidationPrice] = useState(0);
   const [showRepayModal, setShowRepayModal] = useState(false);
   const [showAddCollateralModal, setShowAddCollateralModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -44,33 +48,86 @@ export default function PositionDetailPage() {
   const [addCollateralAmount, setAddCollateralAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
 
+  // Calculate real-time interest
   useEffect(() => {
-    const calculate = () => {
-      const elapsedSeconds = (Date.now() - mockLoanData.startTime) / 1000;
-      const weeklyRateDecimal = mockLoanData.weeklyRate / 100;
-      const secondsPerWeek = 7 * 24 * 60 * 60;
-      const totalInterest =
-        mockLoanData.principalUSDC *
-        weeklyRateDecimal *
-        (elapsedSeconds / secondsPerWeek);
-      setRealTimeInterest(totalInterest);
-      const totalDebt = mockLoanData.principalUSDC + totalInterest;
-      const liquidationThreshold = 125;
-      const health =
-        collateralValueUSDC / (totalDebt * (liquidationThreshold / 100));
-      setHealthFactor(health);
-      const xlmLiquidationValue = totalDebt * (liquidationThreshold / 100);
-      const liquidPrice = xlmLiquidationValue / mockLoanData.collateralXLM;
-      setLiquidationPrice(liquidPrice);
-    };
-    calculate();
-    const it = setInterval(calculate, 1000);
-    return () => clearInterval(it);
-  }, [collateralValueUSDC]);
+    if (!loan) return;
 
-  const totalDebt = mockLoanData.principalUSDC + realTimeInterest;
-  const collateralizationRatio = collateralValueUSDC / totalDebt;
-  const liquidationDistance = collateralValueUSDC - totalDebt * (125 / 100);
+    const calculate = () => {
+      const now = Math.floor(Date.now() / 1000);
+      // const startTime = Number(loan.start_time);
+      const lastUpdate = Number(loan.last_interest_update);
+      const elapsedSeconds = now - lastUpdate;
+      const weeklyRateDecimal = loan.interest_rate / 10000; // Rate is in basis points
+      const secondsPerWeek = 7 * 24 * 60 * 60;
+
+      const borrowedAmount = Number(loan.borrowed_amount) / 1e7; // 7 decimals for USDC
+      const accumulatedInterest = Number(loan.accumulated_interest) / 1e7;
+
+      const newInterest =
+        borrowedAmount * weeklyRateDecimal * (elapsedSeconds / secondsPerWeek);
+      setRealTimeInterest(accumulatedInterest + newInterest);
+    };
+
+    calculate();
+    const interval = setInterval(calculate, 1000);
+    return () => clearInterval(interval);
+  }, [loan]);
+
+  // Loading state
+  if (isLoanLoading || isHealthLoading) {
+    return (
+      <DashboardPageLayout
+        header={{
+          title: "Position Details",
+          description: `Loan #${loanId}`,
+          icon: BracketsIcon,
+        }}
+      >
+        <Card className="p-12 text-center">
+          <p className="text-muted-foreground">Loading position...</p>
+        </Card>
+      </DashboardPageLayout>
+    );
+  }
+
+  // Not found state
+  if (!loan) {
+    return (
+      <DashboardPageLayout
+        header={{
+          title: "Position Details",
+          description: "Loan not found",
+          icon: BracketsIcon,
+        }}
+      >
+        <Card className="p-12 text-center">
+          <p className="text-muted-foreground mb-4">Loan not found</p>
+          <Button onClick={() => void navigate("/dashboard")}>
+            Back to Dashboard
+          </Button>
+        </Card>
+      </DashboardPageLayout>
+    );
+  }
+
+  // Calculate values from real data
+  const principalUSDC = Number(loan.borrowed_amount) / 1e7; // 7 decimals
+  const collateralXLM = Number(loan.collateral_amount) / 1e7; // 7 decimals
+  const collateralValueUSDC = collateralXLM * xlmPrice;
+  const totalDebt = principalUSDC + realTimeInterest;
+  const collateralizationRatio =
+    totalDebt > 0 ? collateralValueUSDC / totalDebt : 0;
+  const liquidationThreshold = loan.liquidation_threshold / 100; // Convert from basis points
+  const healthFactor = loanHealth?.health_factor
+    ? Number(loanHealth.health_factor) / 10000
+    : 0;
+  const liquidationPrice =
+    collateralXLM > 0
+      ? (totalDebt * (liquidationThreshold / 100)) / collateralXLM
+      : 0;
+  const liquidationDistance =
+    collateralValueUSDC - totalDebt * (liquidationThreshold / 100);
+  const weeklyRate = loan.interest_rate / 100; // Convert from basis points to percentage
 
   const getHealthColor = (health: number) =>
     health > 1.5
@@ -80,6 +137,28 @@ export default function PositionDetailPage() {
         : "bg-destructive/10 text-destructive border-destructive/30";
   const getHealthStatus = (health: number) =>
     health > 1.5 ? "Safe" : health > 1.25 ? "Caution" : "At Risk";
+
+  // Format addresses for display
+  const formatAddress = (addr: string) => {
+    if (!addr) return "N/A";
+    return `${addr.slice(0, 4)}...${addr.slice(-3)}`;
+  };
+
+  // Calculate time since loan start
+  const getTimeSinceStart = () => {
+    const startTime = Number(loan.start_time) * 1000;
+    const now = Date.now();
+    const diffMs = now - startTime;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(
+      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+    );
+
+    if (diffDays > 0) {
+      return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    }
+    return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  };
 
   return (
     <DashboardPageLayout
@@ -108,29 +187,35 @@ export default function PositionDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="bg-card rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Loan ID</p>
-                <p className="font-mono font-semibold">#{mockLoanData.id}</p>
+                <p className="font-mono font-semibold">
+                  #{loan.loan_id.toString()}
+                </p>
               </div>
               <div className="bg-card rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Status</p>
-                <Badge className="mt-1 capitalize">{mockLoanData.status}</Badge>
+                <Badge className="mt-1 capitalize">
+                  {loan.is_active ? "active" : "closed"}
+                </Badge>
               </div>
               <div className="bg-card rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Created</p>
-                <p className="text-sm font-mono">1 week ago</p>
+                <p className="text-sm font-mono">{getTimeSinceStart()}</p>
               </div>
               <div className="bg-card rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Lender</p>
-                <p className="text-sm font-mono">{mockLoanData.lenderId}</p>
+                <p className="text-sm font-mono">
+                  {formatAddress(loan.lender)}
+                </p>
               </div>
               <div className="bg-card rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Borrower</p>
-                <p className="text-sm font-mono">{mockLoanData.borrowerId}</p>
+                <p className="text-sm font-mono">
+                  {formatAddress(loan.borrower)}
+                </p>
               </div>
               <div className="bg-card rounded-lg p-3">
                 <p className="text-xs text-muted-foreground">Rate</p>
-                <p className="font-mono font-semibold">
-                  {mockLoanData.weeklyRate}% / week
-                </p>
+                <p className="font-mono font-semibold">{weeklyRate}% / week</p>
               </div>
             </div>
           </Card>
@@ -143,7 +228,10 @@ export default function PositionDetailPage() {
                   Total Collateral Deposited
                 </p>
                 <p className="text-3xl font-semibold text-foreground">
-                  {(mockLoanData.collateralXLM / 1e6).toFixed(0)} XLM
+                  {collateralXLM.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  XLM
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   ≈ ${collateralValueUSDC.toFixed(2)} USD
@@ -175,7 +263,7 @@ export default function PositionDetailPage() {
                   Principal Borrowed
                 </span>
                 <span className="font-mono font-semibold">
-                  ${mockLoanData.principalUSDC.toFixed(2)}
+                  ${principalUSDC.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between bg-card rounded-lg p-4">
@@ -272,7 +360,9 @@ export default function PositionDetailPage() {
               <span className="text-muted-foreground text-sm">
                 Current XLM Price
               </span>
-              <span className="font-mono font-semibold">${XLM_PRICE_USDC}</span>
+              <span className="font-mono font-semibold">
+                ${xlmPrice.toFixed(4)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground text-sm">
@@ -298,28 +388,55 @@ export default function PositionDetailPage() {
             </div>
             <div>
               <Label htmlFor="repay-amount" className="mb-2 block">
-                Repay Amount
+                Repay Amount (USDC)
               </Label>
-              <Input
-                id="repay-amount"
-                type="number"
-                placeholder="0.00"
-                value={repayAmount}
-                onChange={(e) => setRepayAmount(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="repay-amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={repayAmount}
+                  onChange={(e) => setRepayAmount(e.target.value)}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRepayAmount(totalDebt.toFixed(2))}
+                >
+                  Max
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                USDC Balance: 5,000
+                Full debt: ${totalDebt.toFixed(2)}
               </p>
             </div>
             <Button
               className="w-full"
               onClick={() => {
-                setRepayAmount("");
-                setShowRepayModal(false);
+                void (async () => {
+                  if (!loanId) return;
+                  try {
+                    await repayMutation.mutateAsync({
+                      loanId,
+                      repayAmount,
+                    });
+                    setRepayAmount("");
+                    setShowRepayModal(false);
+                  } catch (error) {
+                    console.error("Failed to repay:", error);
+                    alert(
+                      `Failed to repay: ${error instanceof Error ? error.message : "Unknown error"}`,
+                    );
+                  }
+                })();
               }}
-              disabled={!repayAmount || Number.parseFloat(repayAmount) <= 0}
+              disabled={
+                !repayAmount ||
+                Number.parseFloat(repayAmount) <= 0 ||
+                repayMutation.isPending
+              }
             >
-              Approve & Repay
+              {repayMutation.isPending ? "Repaying..." : "Approve & Repay"}
             </Button>
           </div>
         </DialogContent>
@@ -360,18 +477,30 @@ export default function PositionDetailPage() {
             <Button
               className="w-full"
               onClick={() => {
-                const amount = Number.parseFloat(addCollateralAmount) || 0;
-                const newCollateral = mockLoanData.collateralXLM + amount * 1e6;
-                setCollateralValueUSDC(XLM_PRICE_USDC * newCollateral);
-                setAddCollateralAmount("");
-                setShowAddCollateralModal(false);
+                void (async () => {
+                  if (!loanId) return;
+                  try {
+                    await addCollateralMutation.mutateAsync({
+                      loanId,
+                      additionalCollateral: addCollateralAmount,
+                    });
+                    setAddCollateralAmount("");
+                    setShowAddCollateralModal(false);
+                  } catch (error) {
+                    console.error("Failed to add collateral:", error);
+                    alert(
+                      `Failed to add collateral: ${error instanceof Error ? error.message : "Unknown error"}`,
+                    );
+                  }
+                })();
               }}
               disabled={
                 !addCollateralAmount ||
-                Number.parseFloat(addCollateralAmount) <= 0
+                Number.parseFloat(addCollateralAmount) <= 0 ||
+                addCollateralMutation.isPending
               }
             >
-              Approve & Add Collateral
+              {addCollateralMutation.isPending ? "Adding..." : "Add Collateral"}
             </Button>
           </div>
         </DialogContent>
@@ -406,12 +535,33 @@ export default function PositionDetailPage() {
             </div>
             <Button
               className="w-full"
-              onClick={() => setShowWithdrawModal(false)}
+              onClick={() => {
+                void (async () => {
+                  if (!loanId) return;
+                  try {
+                    await withdrawCollateralMutation.mutateAsync({
+                      loanId,
+                      amount: withdrawAmount,
+                    });
+                    setWithdrawAmount("");
+                    setShowWithdrawModal(false);
+                  } catch (error) {
+                    console.error("Failed to withdraw collateral:", error);
+                    alert(
+                      `Failed to withdraw collateral: ${error instanceof Error ? error.message : "Unknown error"}`,
+                    );
+                  }
+                })();
+              }}
               disabled={
-                !withdrawAmount || Number.parseFloat(withdrawAmount) <= 0
+                !withdrawAmount ||
+                Number.parseFloat(withdrawAmount) <= 0 ||
+                withdrawCollateralMutation.isPending
               }
             >
-              Approve & Withdraw
+              {withdrawCollateralMutation.isPending
+                ? "Withdrawing..."
+                : "Withdraw"}
             </Button>
           </div>
         </DialogContent>

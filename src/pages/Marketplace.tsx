@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useMemo } from "react";
 import DashboardPageLayout from "@/components/dashboard/layout";
 import BracketsIcon from "@/components/icons/brackets";
 import type {
@@ -11,87 +11,73 @@ import { LoadingSkeleton } from "@/components/utility/loading-skeleton";
 import { EmptyState } from "@/components/utility/empty-state";
 import { LayoutGridIcon, ListIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const MOCK_OFFERS: LendingOffer[] = [
-  {
-    id: "1",
-    lenderId: "GBPD...ABC",
-    amountUSTC: BigInt("10000000000"),
-    weeklyRate: 5,
-    minCollateralRatio: 200,
-    liquidationThreshold: 125,
-    maxDurationWeeks: 52,
-    availableAmount: BigInt("10000000000"),
-    createdAt: Date.now() - 86400000,
-    status: "active",
-  },
-  {
-    id: "2",
-    lenderId: "GABC...XYZ",
-    amountUSTC: BigInt("50000000000"),
-    weeklyRate: 3.5,
-    minCollateralRatio: 250,
-    liquidationThreshold: 125,
-    maxDurationWeeks: 26,
-    availableAmount: BigInt("25000000000"),
-    createdAt: Date.now() - 172800000,
-    status: "active",
-  },
-  {
-    id: "3",
-    lenderId: "GXYZ...DEF",
-    amountUSTC: BigInt("100000000000"),
-    weeklyRate: 8,
-    minCollateralRatio: 200,
-    liquidationThreshold: 125,
-    maxDurationWeeks: 12,
-    availableAmount: BigInt("50000000000"),
-    createdAt: Date.now() - 259200000,
-    status: "active",
-  },
-];
+import { useActiveOffersWithData } from "@/hooks/lending";
 
 export default function MarketplacePage() {
-  const [offers, setOffers] = useState<LendingOffer[]>(MOCK_OFFERS);
   const [filters, setFilters] = useState<MarketplaceFiltersType>({
     sort: "best-rate",
     view: "grid",
   });
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch real offers from contract with full data
+  const { data: activeOffers = [], isLoading } = useActiveOffersWithData();
+
+  // Convert contract offers to UI format
+  const allOffers: LendingOffer[] = useMemo(() => {
+    return activeOffers
+      .filter((offer) => offer && offer.offer_id !== undefined)
+      .map((offer) => ({
+        id: offer.offer_id.toString(),
+        lenderId: offer.lender,
+        amountUSTC: offer.usdc_amount || BigInt(0),
+        weeklyRate: (offer.weekly_interest_rate || 0) / 100,
+        minCollateralRatio: (offer.min_collateral_ratio || 0) / 100,
+        liquidationThreshold: (offer.liquidation_threshold || 0) / 100,
+        maxDurationWeeks: offer.max_duration_weeks || 0,
+        availableAmount: offer.usdc_amount || BigInt(0),
+        createdAt: Number(offer.created_at || BigInt(0)) * 1000,
+        status: "active" as const,
+      }));
+  }, [activeOffers]);
+
+  // Apply filters and sorting
+  const filteredOffers = useMemo(() => {
+    let filtered = [...allOffers];
+
+    // Apply filters
+    if (filters.minAmount) {
+      filtered = filtered.filter(
+        (o) => o.availableAmount >= filters.minAmount!,
+      );
+    }
+    if (filters.maxRate) {
+      filtered = filtered.filter((o) => o.weeklyRate <= filters.maxRate!);
+    }
+    if (filters.maxDuration) {
+      filtered = filtered.filter(
+        (o) => o.maxDurationWeeks <= filters.maxDuration!,
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (filters.sort) {
+        case "best-rate":
+          return a.weeklyRate - b.weeklyRate;
+        case "highest-amount":
+          return Number(b.availableAmount - a.availableAmount);
+        case "newest":
+          return b.createdAt - a.createdAt;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [allOffers, filters]);
 
   const handleFilterChange = (newFilters: MarketplaceFiltersType) => {
     setFilters(newFilters);
-    setIsLoading(true);
-    setTimeout(() => {
-      let filtered = [...MOCK_OFFERS];
-      if (newFilters.minAmount) {
-        filtered = filtered.filter(
-          (o) => o.availableAmount >= newFilters.minAmount!,
-        );
-      }
-      if (newFilters.maxRate) {
-        filtered = filtered.filter((o) => o.weeklyRate <= newFilters.maxRate!);
-      }
-      if (newFilters.maxDuration) {
-        filtered = filtered.filter(
-          (o) => o.maxDurationWeeks <= newFilters.maxDuration!,
-        );
-      }
-      filtered.sort((a, b) => {
-        switch (newFilters.sort) {
-          case "best-rate":
-            return a.weeklyRate - b.weeklyRate;
-          case "highest-amount":
-            return Number(b.availableAmount - a.availableAmount);
-          case "newest":
-            return b.createdAt - a.createdAt;
-          default:
-            return 0;
-        }
-      });
-      setOffers(filtered);
-      setIsLoading(false);
-    }, 300);
   };
 
   return (
@@ -142,7 +128,7 @@ export default function MarketplacePage() {
                 <LoadingSkeleton key={i} height="h-48" />
               ))}
             </div>
-          ) : offers.length === 0 ? (
+          ) : filteredOffers.length === 0 ? (
             <EmptyState
               icon="📭"
               title="No offers found"
@@ -156,7 +142,7 @@ export default function MarketplacePage() {
                   : "space-y-4"
               }
             >
-              {offers.map((offer) => (
+              {filteredOffers.map((offer) => (
                 <OfferCard key={offer.id} offer={offer} view={filters.view} />
               ))}
             </div>

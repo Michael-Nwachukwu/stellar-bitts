@@ -96,7 +96,7 @@ reset
 # address = "C..."
 # at-ledger-sequence = 50153603
 
-### Staging environment configuration
+### Staging environment configuration (Testnet)
 [staging.network]
 rpc-url = "https://soroban-testnet.stellar.org"
 network-passphrase = "Test SDF Network ; September 2015"
@@ -105,14 +105,34 @@ network-passphrase = "Test SDF Network ; September 2015"
 name = "testnet-user"
 default = true
 
-[staging.contracts]
-# soroban-atomic-swap-contract = { id = "C123..." }
-# soroban-auth-contract = { id = "C234..." }
-# soroban-errors-contract = { id = "C345..." }
-# soroban-hello-world-contract = { id = "C456..." }
-# soroban-increment-contract = { id = "C567..." }
-# soroban-token-contract = { id = "C678..." }
-# eurc = { id = "C789..." }
+# Mock USDC Token for Testnet
+[staging.contracts.mock_usdc]
+client = true
+constructor_args = """
+--admin testnet-user
+--decimal 7
+--name USDC
+--symbol USDC
+"""
+after_deploy = """
+mint --to testnet-user --amount 1000000000000000
+"""
+
+# Mock Oracle for Testnet (Returns XLM = $0.15)
+[staging.contracts.mock_oracle]
+client = true
+
+# Lending Market - P2P Lending Platform
+[staging.contracts.lending_market]
+client = true
+depends_on = ["mock_usdc", "mock_oracle"]
+constructor_args = """
+--admin testnet-user
+--usdc-token mock_usdc
+--xlm-token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
+--oracle-address mock_oracle
+--max-interest-rate 3000
+"""
 
 ### Production environment configuration
 [production.network]

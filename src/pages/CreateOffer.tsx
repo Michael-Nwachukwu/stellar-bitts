@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCreateOffer } from "@/hooks/lending";
+import { useNavigate } from "react-router-dom";
 
 interface OfferFormData {
   amountUSTC: string;
@@ -24,6 +26,7 @@ interface OfferFormData {
 }
 
 export default function CreateOfferPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<OfferFormData>({
     amountUSTC: "",
     weeklyRate: 5,
@@ -35,7 +38,10 @@ export default function CreateOfferPage() {
     "monthly",
   );
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdOfferId, setCreatedOfferId] = useState<string>("");
+
+  // Use the real mutation hook
+  const createOfferMutation = useCreateOffer();
 
   const amount = Number.parseFloat(formData.amountUSTC) || 0;
   const weeklyReturn = (amount * formData.weeklyRate) / 100;
@@ -203,17 +209,28 @@ export default function CreateOfferPage() {
 
               <Button
                 onClick={() => {
-                  setIsSubmitting(true);
-                  setTimeout(() => {
-                    setIsSubmitting(false);
-                    setShowSuccessModal(true);
-                  }, 1500);
+                  void (async () => {
+                    try {
+                      const offerId = await createOfferMutation.mutateAsync({
+                        usdcAmount: formData.amountUSTC,
+                        weeklyRate: formData.weeklyRate,
+                        minCollateralRatio: formData.minCollateralRatio,
+                        liquidationThreshold: formData.liquidationThreshold,
+                        maxDurationWeeks: formData.maxDurationWeeks,
+                      });
+                      setCreatedOfferId(offerId.toString());
+                      setShowSuccessModal(true);
+                    } catch (error) {
+                      console.error("Failed to create offer:", error);
+                      // Could add error toast here
+                    }
+                  })();
                 }}
-                disabled={isSubmitting}
+                disabled={createOfferMutation.isPending || !formData.amountUSTC}
                 size="lg"
                 className="w-full"
               >
-                {isSubmitting
+                {createOfferMutation.isPending
                   ? "Approving & Creating..."
                   : "Approve & Create Offer"}
               </Button>
@@ -222,7 +239,7 @@ export default function CreateOfferPage() {
         </div>
 
         <div>
-          <Card className="p-6 sticky top-[var(--header-mobile)] lg:top-0 bg-gradient-to-b from-primary/5 to-transparent border-primary/20">
+          <Card className="p-6 sticky top-header-mobile lg:top-0 bg-linear-to-b from-primary/5 to-transparent border-primary/20">
             <h3 className="font-semibold text-foreground mb-4">
               Offer Preview
             </h3>
@@ -335,7 +352,7 @@ export default function CreateOfferPage() {
             <div className="bg-success/10 rounded-lg p-4 text-center">
               <p className="text-sm text-muted-foreground mb-1">Offer ID</p>
               <p className="text-2xl font-mono font-semibold text-success">
-                #2847
+                {`# ${createdOfferId}`}
               </p>
             </div>
             <div className="space-y-2 text-sm">
@@ -357,14 +374,27 @@ export default function CreateOfferPage() {
             <div className="space-y-2 pt-4">
               <Button
                 className="w-full"
-                onClick={() => setShowSuccessModal(false)}
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  void navigate("/dashboard");
+                }}
               >
-                View in Marketplace
+                View in Dashboard
               </Button>
               <Button
                 variant="outline"
                 className="w-full bg-transparent"
-                onClick={() => setShowSuccessModal(false)}
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  // Reset form
+                  setFormData({
+                    amountUSTC: "",
+                    weeklyRate: 5,
+                    minCollateralRatio: 200,
+                    liquidationThreshold: 125,
+                    maxDurationWeeks: 52,
+                  });
+                }}
               >
                 Create Another
               </Button>

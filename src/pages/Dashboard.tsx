@@ -14,89 +14,16 @@ import ProcessorIcon from "@/components/icons/proccesor";
 import BoomIcon from "@/components/icons/boom";
 import DashboardChart from "@/components/dashboard/chart";
 import { useNavigate } from "react-router-dom";
-
-interface LendingOffer {
-  id: string;
-  amountUSTC: number;
-  weeklyRate: number;
-  minCollateralRatio: number;
-  liquidationThreshold: number;
-  maxDurationWeeks: number;
-  availableAmount: number;
-  borrowedAmount: number;
-  accumulatedInterestEarned: number;
-  status: "active";
-}
-
-const MOCK_BORROWS = [
-  {
-    id: "5921",
-    offerId: "1",
-    lenderId: "GBPD...ABC",
-    principalUSDC: 5000,
-    collateralXLM: 50000,
-    weeklyRate: 5,
-    startTime: Date.now() - 604800000,
-    accumulatedInterestUSDC: 250,
-    healthFactor: 1.8,
-    status: "active" as const,
-  },
-  {
-    id: "5922",
-    lenderId: "GABC...XYZ",
-    principalUSDC: 10000,
-    collateralXLM: 75000,
-    weeklyRate: 3.5,
-    startTime: Date.now() - 1209600000,
-    accumulatedInterestUSDC: 700,
-    healthFactor: 1.2,
-    status: "active" as const,
-  },
-];
-
-const MOCK_OFFERS: LendingOffer[] = [
-  {
-    id: "offer_1",
-    amountUSTC: 10000,
-    weeklyRate: 5,
-    minCollateralRatio: 200,
-    liquidationThreshold: 125,
-    maxDurationWeeks: 52,
-    availableAmount: 8000,
-    borrowedAmount: 2000,
-    accumulatedInterestEarned: 450,
-    status: "active" as const,
-  },
-  {
-    id: "offer_2",
-    amountUSTC: 50000,
-    weeklyRate: 3.5,
-    minCollateralRatio: 250,
-    liquidationThreshold: 125,
-    maxDurationWeeks: 26,
-    availableAmount: 25000,
-    borrowedAmount: 25000,
-    accumulatedInterestEarned: 1850,
-    status: "active" as const,
-  },
-];
-
-const MOCK_LENDING_LOANS = [
-  {
-    id: "5921",
-    borrowerId: "GXYZ...DEF",
-    amountLentUSDC: 2000,
-    accumulatedInterestEarned: 250,
-    status: "active" as const,
-  },
-  {
-    id: "5922",
-    borrowerId: "GAAA...BBB",
-    amountLentUSDC: 25000,
-    accumulatedInterestEarned: 1850,
-    status: "active" as const,
-  },
-];
+import {
+  useDashboardStats,
+  useUserLoansAsBorrowerWithData,
+  useUserOffersWithData,
+} from "@/hooks/lending";
+import {
+  formatUsdc,
+  getHealthColor,
+  getHealthStatus,
+} from "@/lib/lending-utils";
 
 const TOP_MARKETPLACE_OFFERS = [
   {
@@ -153,26 +80,19 @@ export default function LendingDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("borrows");
 
-  const totalBorrowed = MOCK_BORROWS.reduce(
-    (sum, b) => sum + b.principalUSDC,
-    0,
-  );
-  const totalBorrowedInterest = MOCK_BORROWS.reduce(
-    (sum, b) => sum + b.accumulatedInterestUSDC,
-    0,
-  );
-  const totalLent = MOCK_OFFERS.reduce((sum, o) => sum + o.borrowedAmount, 0);
-  const totalEarnedInterest = MOCK_OFFERS.reduce(
-    (sum, o) => sum + o.accumulatedInterestEarned,
-    0,
-  );
-  const netPosition = totalEarnedInterest - totalBorrowedInterest;
+  // Fetch real data from hooks
+  const { data: dashboardData } = useDashboardStats();
+  const { data: borrowerLoans = [], isLoading: isLoansLoading } =
+    useUserLoansAsBorrowerWithData();
+  const { data: offers = [], isLoading: isOffersLoading } =
+    useUserOffersWithData();
 
+  // Dashboard stats from real data
   const dashboardStats = [
     {
       label: "Total Borrowed",
-      value: `$${totalBorrowed.toLocaleString()}`,
-      description: `+$${totalBorrowedInterest.toFixed(2)} interest accrued`,
+      value: dashboardData?.totalBorrowed || "$0",
+      description: `+${dashboardData?.totalBorrowedInterest || "$0"} interest accrued`,
       icon: GearIcon,
       tag: "ACTIVE",
       intent: "negative" as const,
@@ -180,8 +100,8 @@ export default function LendingDashboard() {
     },
     {
       label: "Total Lent",
-      value: `$${totalLent.toLocaleString()}`,
-      description: `+$${totalEarnedInterest.toFixed(2)} earned`,
+      value: dashboardData?.totalLent || "$0",
+      description: `+${dashboardData?.totalEarnedInterest || "$0"} earned`,
       icon: ProcessorIcon,
       tag: "EARNING",
       intent: "positive" as const,
@@ -189,24 +109,36 @@ export default function LendingDashboard() {
     },
     {
       label: "Net Position",
-      value: `$${netPosition.toFixed(2)}`,
+      value: dashboardData?.netPosition || "$0",
       description: "Profit/Loss",
       icon: BoomIcon,
-      tag: netPosition >= 0 ? "PROFIT" : "LOSS",
-      intent: netPosition >= 0 ? "positive" : "negative",
+      tag: dashboardData?.isProfit ? "PROFIT" : "LOSS",
+      intent: dashboardData?.isProfit ? "positive" : "negative",
     },
   ];
 
-  const getHealthColor = (health: number) => {
-    if (health > 1.5) return "bg-success/10 text-success";
-    if (health > 1.25) return "bg-warning/10 text-warning";
-    return "bg-destructive/10 text-destructive";
-  };
-  const getHealthStatus = (health: number) => {
-    if (health > 1.5) return "Safe";
-    if (health > 1.25) return "Caution";
-    return "At Risk";
-  };
+  // Convert borrower loans to format expected by UI
+  const borrowLoansForUI = borrowerLoans
+    .filter(
+      (loan) =>
+        loan && loan.loan_id !== undefined && loan.offer_id !== undefined,
+    )
+    .map((loan) => ({
+      id: loan.loan_id.toString(),
+      offerId: loan.offer_id.toString(),
+      lenderId: loan.lender,
+      principalUSDC: Number(
+        formatUsdc(loan.borrowed_amount || BigInt(0)).replace(/,/g, ""),
+      ),
+      collateralXLM: Number(loan.collateral_amount || BigInt(0)) / 10000000,
+      weeklyRate: (loan.interest_rate || 0) / 100,
+      startTime: Number(loan.start_time || BigInt(0)) * 1000,
+      accumulatedInterestUSDC: Number(
+        formatUsdc(loan.accumulated_interest || BigInt(0)).replace(/,/g, ""),
+      ),
+      healthFactor: 1.5, // Will be fetched from useLoanHealth in Position page
+      status: "active" as const,
+    }));
 
   return (
     <DashboardPageLayout
@@ -252,85 +184,97 @@ export default function LendingDashboard() {
             value="borrows"
             className="space-y-6 overflow-y-auto flex-1"
           >
-            {MOCK_BORROWS.some((b) => b.healthFactor < 1.3) && (
-              <LiquidationAlert
-                loans={MOCK_BORROWS.filter((b) => b.healthFactor < 1.3)}
-              />
-            )}
-
-            {MOCK_BORROWS.length === 0 ? (
+            {isLoansLoading ? (
               <Card className="p-12 text-center">
-                <p className="text-muted-foreground mb-4">No active loans</p>
-                <Button onClick={() => void navigate("/marketplace")}>
-                  Browse Offers
-                </Button>
+                <p className="text-muted-foreground">Loading your loans...</p>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {MOCK_BORROWS.map((loan) => (
-                  <Card
-                    key={loan.id}
-                    className="p-6 hover:border-primary/50 transition-colors cursor-pointer"
-                    onClick={() => void navigate(`/position/${loan.id}`)}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Loan ID
-                        </p>
-                        <p className="font-mono font-semibold text-foreground">
-                          #{loan.id}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Borrowed
-                        </p>
-                        <p className="font-mono font-semibold text-foreground">
-                          ${loan.principalUSDC.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Collateral
-                        </p>
-                        <p className="font-mono font-semibold text-foreground">
-                          {(loan.collateralXLM / 1000).toFixed(0)}k XLM
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Interest Accrued
-                        </p>
-                        <p className="font-mono font-semibold text-warning">
-                          ${loan.accumulatedInterestUSDC.toFixed(2)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Health
-                        </p>
-                        <Badge className={getHealthColor(loan.healthFactor)}>
-                          {getHealthStatus(loan.healthFactor)} (
-                          {loan.healthFactor.toFixed(2)})
-                        </Badge>
-                      </div>
-                    </div>
+              <>
+                {borrowLoansForUI.some((b) => b.healthFactor < 1.3) && (
+                  <LiquidationAlert
+                    loans={borrowLoansForUI.filter((b) => b.healthFactor < 1.3)}
+                  />
+                )}
 
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Repay
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Add Collateral
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        Details
-                      </Button>
-                    </div>
+                {borrowLoansForUI.length === 0 ? (
+                  <Card className="p-12 text-center">
+                    <p className="text-muted-foreground mb-4">
+                      No active loans
+                    </p>
+                    <Button onClick={() => void navigate("/marketplace")}>
+                      Browse Offers
+                    </Button>
                   </Card>
-                ))}
-              </div>
+                ) : (
+                  <div className="space-y-4">
+                    {borrowLoansForUI.map((loan) => (
+                      <Card
+                        key={loan.id}
+                        className="p-6 hover:border-primary/50 transition-colors cursor-pointer"
+                        onClick={() => void navigate(`/position/${loan.id}`)}
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Loan ID
+                            </p>
+                            <p className="font-mono font-semibold text-foreground">
+                              #{loan.id}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Borrowed
+                            </p>
+                            <p className="font-mono font-semibold text-foreground">
+                              ${loan.principalUSDC.toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Collateral
+                            </p>
+                            <p className="font-mono font-semibold text-foreground">
+                              {(loan.collateralXLM / 1000).toFixed(0)}k XLM
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Interest Accrued
+                            </p>
+                            <p className="font-mono font-semibold text-warning">
+                              ${loan.accumulatedInterestUSDC.toFixed(2)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">
+                              Health
+                            </p>
+                            <Badge
+                              className={getHealthColor(loan.healthFactor)}
+                            >
+                              {getHealthStatus(loan.healthFactor)} (
+                              {loan.healthFactor.toFixed(2)})
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            Repay
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Add Collateral
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            Details
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
 
@@ -347,124 +291,89 @@ export default function LendingDashboard() {
               </Button>
             </div>
 
-            <div className="space-y-6">
-              {MOCK_OFFERS.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-foreground">
-                    Active Offers
-                  </h4>
-                  {MOCK_OFFERS.map((offer) => (
-                    <Card
-                      key={offer.id}
-                      className="p-6 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Pool Size
-                          </p>
-                          <p className="font-mono font-semibold text-foreground">
-                            ${offer.amountUSTC.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Available
-                          </p>
-                          <p className="font-mono font-semibold text-foreground">
-                            ${offer.availableAmount.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Lent Out
-                          </p>
-                          <p className="font-mono font-semibold text-foreground">
-                            ${offer.borrowedAmount.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Rate
-                          </p>
-                          <p className="font-mono font-semibold text-foreground">
-                            {offer.weeklyRate}% / week
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Interest Earned
-                          </p>
-                          <p className="font-mono font-semibold text-success">
-                            ${offer.accumulatedInterestEarned.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          Edit Terms
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Withdraw Available
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Cancel Offer
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
+            {isOffersLoading ? (
+              <Card className="p-12 text-center">
+                <p className="text-muted-foreground">Loading your offers...</p>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {offers.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-foreground">
+                      Active Offers
+                    </h4>
+                    {offers
+                      .filter((offer) => offer && offer.offer_id !== undefined)
+                      .map((offer) => {
+                        const availableAmount = offer.usdc_amount || BigInt(0);
+                        const weeklyRate =
+                          (offer.weekly_interest_rate || 0) / 100;
 
-              {MOCK_LENDING_LOANS.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-foreground">
-                    Loans from Your Offers
-                  </h4>
-                  {MOCK_LENDING_LOANS.map((loanRecord) => (
-                    <Card
-                      key={loanRecord.id}
-                      className="p-6 hover:border-primary/50 transition-colors cursor-pointer"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Loan ID
-                          </p>
-                          <p className="font-mono font-semibold text-foreground">
-                            #{loanRecord.id}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Borrower
-                          </p>
-                          <p className="text-sm font-mono text-muted-foreground">
-                            {loanRecord.borrowerId}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Amount Lent
-                          </p>
-                          <p className="font-mono font-semibold text-foreground">
-                            ${loanRecord.amountLentUSDC.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
-                            Interest Earned
-                          </p>
-                          <p className="font-mono font-semibold text-success">
-                            ${loanRecord.accumulatedInterestEarned.toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
+                        return (
+                          <Card
+                            key={offer.offer_id.toString()}
+                            className="p-6 hover:border-primary/50 transition-colors"
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  Pool Size
+                                </p>
+                                <p className="font-mono font-semibold text-foreground">
+                                  {formatUsdc(offer.usdc_amount || BigInt(0))}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  Available
+                                </p>
+                                <p className="font-mono font-semibold text-foreground">
+                                  {formatUsdc(availableAmount)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  Min Collateral
+                                </p>
+                                <p className="font-mono font-semibold text-foreground">
+                                  {(offer.min_collateral_ratio || 0) / 100}%
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  Rate
+                                </p>
+                                <p className="font-mono font-semibold text-foreground">
+                                  {weeklyRate}% / week
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  Created
+                                </p>
+                                <p className="font-mono text-sm text-muted-foreground">
+                                  {new Date(
+                                    Number(offer.created_at || BigInt(0)) *
+                                      1000,
+                                  ).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">
+                                Withdraw Available
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                Cancel Offer
+                              </Button>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 

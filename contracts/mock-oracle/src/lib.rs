@@ -53,7 +53,7 @@ impl MockOracle {
     /// For mock: always returns same price regardless of timestamp
     pub fn price(env: Env, _asset: Asset, _timestamp: u64) -> Option<PriceData> {
         Some(PriceData {
-            price: 1_500_000_000_000_000, // 0.15 USDC with 14 decimals = 0.15 * 10^14
+            price: 15_000_000_000_000, // 0.15 USDC with 14 decimals = 0.15 * 10^14 = 15 trillion
             timestamp: env.ledger().timestamp(),
         })
     }
@@ -62,7 +62,7 @@ impl MockOracle {
     /// Returns fixed price: $0.15 per XLM
     pub fn lastprice(env: Env, _asset: Asset) -> Option<PriceData> {
         Some(PriceData {
-            price: 1_500_000_000_000_000, // 0.15 USDC with 14 decimals
+            price: 15_000_000_000_000, // 0.15 USDC with 14 decimals = 15 trillion stroops
             timestamp: env.ledger().timestamp(),
         })
     }
@@ -75,7 +75,7 @@ impl MockOracle {
 
         for i in 0..records {
             prices.push_back(PriceData {
-                price: 1_500_000_000_000_000,
+                price: 15_000_000_000_000,
                 timestamp: current_time.saturating_sub((i as u64) * 300), // 5 min intervals
             });
         }
@@ -86,7 +86,7 @@ impl MockOracle {
     /// Quotes the most recent cross price record for the pair of assets
     pub fn x_last_price(env: Env, _base_asset: Asset, _quote_asset: Asset) -> Option<PriceData> {
         Some(PriceData {
-            price: 1_500_000_000_000_000,
+            price: 15_000_000_000_000,
             timestamp: env.ledger().timestamp(),
         })
     }
@@ -94,7 +94,7 @@ impl MockOracle {
     /// Quotes the cross price for the pair of assets at specific timestamp
     pub fn x_price(env: Env, _base_asset: Asset, _quote_asset: Asset, _timestamp: u64) -> Option<PriceData> {
         Some(PriceData {
-            price: 1_500_000_000_000_000,
+            price: 15_000_000_000_000,
             timestamp: env.ledger().timestamp(),
         })
     }
@@ -106,7 +106,7 @@ impl MockOracle {
 
         for i in 0..records {
             prices.push_back(PriceData {
-                price: 1_500_000_000_000_000,
+                price: 15_000_000_000_000,
                 timestamp: current_time.saturating_sub((i as u64) * 300),
             });
         }
@@ -116,12 +116,12 @@ impl MockOracle {
 
     /// Quotes the time-weighted average price for the given asset over N recent records
     pub fn twap(_env: Env, _asset: Asset, _records: u32) -> Option<i128> {
-        Some(1_500_000_000_000_000) // Same fixed price
+        Some(15_000_000_000_000) // Same fixed price
     }
 
     /// Quotes the time-weighted average cross price for the given asset pair over N recent records
     pub fn x_twap(_env: Env, _base_asset: Asset, _quote_asset: Asset, _records: u32) -> Option<i128> {
-        Some(1_500_000_000_000_000) // Same fixed price
+        Some(15_000_000_000_000) // Same fixed price
     }
 
     /// Price feed resolution (default tick period timeframe, in seconds - 5 minutes)
