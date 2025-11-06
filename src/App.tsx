@@ -7,6 +7,7 @@ import Marketplace from "./pages/Marketplace";
 import CreateOffer from "./pages/CreateOffer";
 import Borrow from "./pages/Borrow";
 import Position from "./pages/Position";
+import Positions from "./pages/Positions.tsx";
 
 const AppLayout: React.FC = () => (
   <main>
@@ -26,6 +27,7 @@ function App() {
         <Route path="/create-offer" element={<CreateOffer />} />
         <Route path="/borrow/:offerId" element={<Borrow />} />
         <Route path="/position/:loanId" element={<Position />} />
+        <Route path="/positions" element={<Positions />} />
       </Route>
     </Routes>
   );

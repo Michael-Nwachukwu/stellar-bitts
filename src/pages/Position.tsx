@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardPageLayout from "@/components/dashboard/layout";
 import { BracketsIcon } from "@/components/icons/brackets";
 import { useNavigate, useParams } from "react-router-dom";
@@ -327,7 +327,7 @@ export default function PositionDetailPage() {
           {healthFactor < 1.3 && (
             <Card className="p-4 bg-destructive/5 border-destructive/30">
               <div className="flex gap-2 mb-3">
-                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
                 <p className="font-semibold text-destructive">
                   Liquidation Warning
                 </p>

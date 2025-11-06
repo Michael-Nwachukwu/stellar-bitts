@@ -56,7 +56,7 @@ const data = {
         },
         {
           title: "My Positions",
-          url: "/dashboard",
+          url: "/positions",
           icon: CuteRobotIcon,
           isActive: false,
         },
