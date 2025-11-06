@@ -205,22 +205,14 @@ export default function BorrowPage() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setFormData({
-                        ...formData,
-                        collateralXLM: (balances?.xlm || 0).toFixed(2),
-                      })
+                      setFormData({ ...formData, collateralXLM: "1000" })
                     }
                   >
                     Max
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Available:{" "}
-                  {(balances?.xlm || 0).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{" "}
-                  XLM
+                  Available: {(balances?.xlm || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} XLM
                 </p>
               </div>
               <div className="bg-card rounded-lg p-4">

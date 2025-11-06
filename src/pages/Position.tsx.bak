@@ -40,7 +40,6 @@ export default function PositionDetailPage() {
   const repayMutation = useRepay();
   const addCollateralMutation = useAddCollateral();
   const withdrawCollateralMutation = useWithdrawCollateral();
-  const { data: balances } = useTokenBalances();
 
   const [realTimeInterest, setRealTimeInterest] = useState(0);
   const [showRepayModal, setShowRepayModal] = useState(false);
@@ -408,10 +407,9 @@ export default function PositionDetailPage() {
                   Max
                 </Button>
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>Full debt: ${totalDebt.toFixed(2)}</span>
-                <span>Balance: {(balances?.usdc || 0).toFixed(2)} USDC</span>
-              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Full debt: ${totalDebt.toFixed(2)}
+              </p>
             </div>
             <Button
               className="w-full"
@@ -466,31 +464,15 @@ export default function PositionDetailPage() {
               <Label htmlFor="add-collateral" className="mb-2 block">
                 XLM Amount
               </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="add-collateral"
-                  type="number"
-                  placeholder="0.00"
-                  value={addCollateralAmount}
-                  onChange={(e) => setAddCollateralAmount(e.target.value)}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setAddCollateralAmount((balances?.xlm || 0).toFixed(2))
-                  }
-                >
-                  Max
-                </Button>
-              </div>
+              <Input
+                id="add-collateral"
+                type="number"
+                placeholder="0.00"
+                value={addCollateralAmount}
+                onChange={(e) => setAddCollateralAmount(e.target.value)}
+              />
               <p className="text-xs text-muted-foreground mt-1">
-                Available:{" "}
-                {(balances?.xlm || 0).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                XLM
+                Available: 1,000 XLM
               </p>
             </div>
             <Button
@@ -551,9 +533,6 @@ export default function PositionDetailPage() {
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Max withdrawable without affecting health
-              </p>
             </div>
             <Button
               className="w-full"

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCreateOffer } from "@/hooks/lending";
 import { useNavigate } from "react-router-dom";
+import { useTokenBalances } from "@/hooks/useTokenBalances";
 
 interface OfferFormData {
   amountUSTC: string;
@@ -42,6 +43,7 @@ export default function CreateOfferPage() {
 
   // Use the real mutation hook
   const createOfferMutation = useCreateOffer();
+  const { data: balances } = useTokenBalances();
 
   const amount = Number.parseFloat(formData.amountUSTC) || 0;
   const weeklyReturn = (amount * formData.weeklyRate) / 100;
@@ -83,14 +85,22 @@ export default function CreateOfferPage() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      setFormData({ ...formData, amountUSTC: "100000" })
+                      setFormData({
+                        ...formData,
+                        amountUSTC: (balances?.usdc || 0).toFixed(2),
+                      })
                     }
                   >
                     Max
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Balance: 500,000 USDC
+                  Balance:{" "}
+                  {(balances?.usdc || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  USDC
                 </p>
               </div>
 
