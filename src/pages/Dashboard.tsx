@@ -570,9 +570,10 @@ export default function LendingDashboard() {
                   Number(offer.usdc_amount || BigInt(0)) / 1e7;
                 const weeklyRate = (offer.weekly_interest_rate || 0) / 100;
                 return {
-                  id: offer.offer_id.toString(),
+                  id: Number(offer.offer_id),
                   name: `${(availableUSDC / 1000).toFixed(1)}k USDC`,
                   handle: `${weeklyRate}% weekly`,
+                  streak: `${(offer.min_collateral_ratio || 0) / 100}%`,
                   avatar: "/stellar-usdc-offer.jpg",
                   points: Number(offer.usdc_amount || BigInt(0)) / 1e7,
                   subtitle: `${(offer.min_collateral_ratio || 0) / 100}% collateral`,

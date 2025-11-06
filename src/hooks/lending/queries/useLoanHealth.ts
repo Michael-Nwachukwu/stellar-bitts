@@ -2,12 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import lendingMarket from "@/contracts/lending_market";
 
 export interface LoanHealth {
-  collateral_value_usdc: bigint;
-  total_debt: bigint;
+  collateral_value_usd: bigint;
+  debt_value_usd: bigint;
   collateralization_ratio: number;
   health_factor: number;
   is_liquidatable: boolean;
-  liquidation_price: bigint;
 }
 
 /**
@@ -30,7 +29,7 @@ export function useLoanHealth(loanId: string | undefined) {
         throw new Error("Failed to fetch loan health");
       }
 
-      return healthResult.result.unwrap() as LoanHealth;
+      return healthResult.result.unwrap();
     },
     enabled: !!loanId,
     staleTime: 5000, // 5 seconds - very frequent for health monitoring

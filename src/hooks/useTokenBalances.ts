@@ -34,8 +34,7 @@ export function useTokenBalances() {
           });
 
           if (result) {
-            const balance = result.unwrap();
-            usdcAmount = Number(balance) / 1e7; // 7 decimals
+            usdcAmount = Number(result) / 1e7; // 7 decimals
           }
         } catch (error) {
           console.warn("Could not fetch USDC balance:", error);

@@ -1,8 +1,4 @@
-"use client";
-
-import * as React from "react";
 import { XAxis, YAxis, CartesianGrid, Area, AreaChart } from "recharts";
-
 import {
   ChartConfig,
   ChartContainer,
@@ -16,6 +12,7 @@ import {
   useUserLoansAsBorrowerWithData,
   useUserOffersWithData,
 } from "@/hooks/lending";
+import { useMemo, useState } from "react";
 
 type ChartDataPoint = {
   date: string;
@@ -40,7 +37,7 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function DashboardChart() {
-  const [activeTab, setActiveTab] = React.useState<TimePeriod>("week");
+  const [activeTab, setActiveTab] = useState<TimePeriod>("week");
   const { data: borrowerLoans = [] } = useUserLoansAsBorrowerWithData();
   const { data: offers = [] } = useUserOffersWithData();
 
@@ -51,7 +48,7 @@ export default function DashboardChart() {
   };
 
   // Generate chart data based on real positions
-  const generateChartData = React.useMemo(() => {
+  const generateChartData = useMemo(() => {
     const totalBorrowed = borrowerLoans.reduce((sum, loan) => {
       return sum + Number(loan.borrowed_amount || BigInt(0)) / 1e7;
     }, 0);

@@ -56,7 +56,7 @@ export function AmountInput({
         )}
         {max !== undefined && (
           <Button
-            size="xs"
+            size="sm"
             variant="outline"
             onClick={() => onChange(max.toString())}
             className="h-6 text-xs"

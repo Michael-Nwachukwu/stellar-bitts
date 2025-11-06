@@ -1,7 +1,7 @@
-import * as React from "react";
 import { Server, Api } from "@stellar/stellar-sdk/rpc";
 import { xdr } from "@stellar/stellar-sdk";
 import { rpcUrl, stellarNetwork } from "../contracts/util";
+import { useEffect } from "react";
 
 /**
  * Concatenated `${contractId}:${topic}`
@@ -38,7 +38,7 @@ export function useSubscription(
   const id = `${contractId}:${topic}`;
   paging[id] = paging[id] || {};
 
-  React.useEffect(() => {
+  useEffect(() => {
     let timeoutId: NodeJS.Timeout | null = null;
     let stop = false;
 
@@ -68,7 +68,7 @@ export function useSubscription(
         if (response.latestLedger) {
           paging[id].lastLedgerStart = response.latestLedger;
         }
-        if (response.events) {
+        if (response.events && response.events.length > 0) {
           response.events.forEach((event) => {
             try {
               onEvent(event);
@@ -77,10 +77,13 @@ export function useSubscription(
                 "Poll Events: subscription callback had error: ",
                 error,
               );
-            } finally {
-              paging[id].pagingToken = event.pagingToken;
             }
           });
+          // Use cursor from the response, not from individual events
+          if (response.events.length > 0) {
+            paging[id].pagingToken =
+              response.events[response.events.length - 1].id;
+          }
         }
       } catch (error) {
         console.error("Poll Events: error: ", error);

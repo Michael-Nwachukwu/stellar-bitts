@@ -18,7 +18,7 @@ interface SwipeableWrapperProps {
 }
 
 function SwipeableWrapper({ children, onDelete }: SwipeableWrapperProps) {
-  const handleDragEnd = (event: Event, info: PanInfo) => {
+  const handleDragEnd = (info: PanInfo) => {
     // Delete if swiped left more than 120px OR with sufficient velocity
     const shouldDelete =
       info.offset.x < -120 || (info.offset.x < -50 && info.velocity.x < -500);
@@ -35,7 +35,7 @@ function SwipeableWrapper({ children, onDelete }: SwipeableWrapperProps) {
       dragConstraints={{ left: -200, right: 0 }}
       dragSnapToOrigin
       dragElastic={0.2}
-      onDragEnd={handleDragEnd}
+      onDragEnd={(_event, info) => handleDragEnd(info)}
       whileDrag={{
         scale: 0.98,
         boxShadow: "0 5px 15px rgba(0,0,0,0.1)",

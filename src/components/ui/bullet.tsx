@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { cva, VariantProps } from "class-variance-authority";
-import React, { HTMLAttributes } from "react";
+import { HTMLAttributes } from "react";
 
 export const bulletVariants = cva("rounded-[1.5px]", {
   variants: {
