@@ -7,7 +7,7 @@ export default function LandingPage() {
   return (
     <div className="w-full min-h-screen flex flex-col overflow-hidden">
       {/* Navigation */}
-      <nav className="border-b border-accent/20 backdrop-blur-sm z-50 flex-shrink-0">
+      <nav className="border-b border-accent/20 backdrop-blur-sm z-50 shrink-0">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MonkeyIcon className="size-8" />
@@ -107,7 +107,7 @@ export default function LandingPage() {
         </div>
 
         {/* Footer */}
-        <footer className="border-t border-accent/20 py-8 px-6 flex-shrink-0">
+        <footer className="border-t border-accent/20 py-8 px-6 shrink-0">
           <div className="max-w-6xl mx-auto flex items-center justify-between">
             <p className="text-muted-foreground text-sm">
               © 2025 stellar-bits. All rights reserved.
