@@ -29,7 +29,7 @@ export function useUserLoansAsBorrowerWithData() {
 
   // Then fetch each loan's full data
   const loanQueries = useQueries({
-    queries: loanIds.map((loanId) => ({
+    queries: loanIds.map((loanId: bigint) => ({
       queryKey: ["loan", loanId.toString()],
       queryFn: async () => {
         const loanResult = await lendingMarket.get_loan({
@@ -86,7 +86,7 @@ export function useUserLoansAsLenderWithData() {
 
   // Then fetch each loan's full data
   const loanQueries = useQueries({
-    queries: loanIds.map((loanId) => ({
+    queries: loanIds.map((loanId: bigint) => ({
       queryKey: ["loan", loanId.toString()],
       queryFn: async () => {
         const loanResult = await lendingMarket.get_loan({

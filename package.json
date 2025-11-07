@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "concurrently \"stellar scaffold watch --build-clients\" \"vite\"",
     "start": "concurrently \"stellar scaffold watch --build-clients\" \"vite\"",
-    "build": "tsc -b && vite build",
+    "build": "npm install --workspace=packages --legacy-peer-deps && tsc -b && vite build",
+    "build:contracts": "stellar scaffold build --build-clients",
     "install:contracts": "npm install --legacy-peer-deps --workspace=packages && npm run build --workspace=packages",
     "preview": "vite preview",
     "lint": "eslint .",

@@ -11,6 +11,8 @@ test_snapshots
 # build output
 dist
 dist-ssr
+# but allow package dist folders
+!packages/*/dist
 
 # dependencies
 node_modules/
@@ -35,11 +37,19 @@ lerna-debug.log*
 # macOS-specific files
 .DS_Store
 
-# generated contract clients
-packages/*
+# generated contract clients - include package.json and dist, exclude node_modules
+packages/*/node_modules
+packages/*/out
 # if you have other workspace packages, add them here
 !packages/.gitkeep
+!packages/*/
+!packages/*/dist/
+!packages/*/package.json
+!packages/*/package-lock.json
+!packages/*/tsconfig.json
+!packages/*/README.md
+!packages/*/.gitignore
 
-# generated contract client imports
-src/contracts/*
-!src/contracts/util.ts
+# generated contract client imports - include these so Vercel can build
+!src/contracts/
+!src/contracts/*.ts

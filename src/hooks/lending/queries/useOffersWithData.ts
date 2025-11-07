@@ -21,7 +21,7 @@ export function useActiveOffersWithData() {
 
   // Then fetch each offer's full data
   const offerQueries = useQueries({
-    queries: offerIds.map((offerId) => ({
+    queries: offerIds.map((offerId: bigint) => ({
       queryKey: ["offer", offerId.toString()],
       queryFn: async () => {
         const offerResult = await lendingMarket.get_offer({
@@ -79,7 +79,7 @@ export function useUserOffersWithData() {
 
   // Then fetch each offer's full data
   const offerQueries = useQueries({
-    queries: offerIds.map((offerId) => ({
+    queries: offerIds.map((offerId: bigint) => ({
       queryKey: ["offer", offerId.toString()],
       queryFn: async () => {
         const offerResult = await lendingMarket.get_offer({
