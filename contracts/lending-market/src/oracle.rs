@@ -10,14 +10,8 @@ pub fn get_xlm_price(env: &Env, oracle_address: &Address) -> Result<PriceData, E
     // Create Reflector client
     let client = ReflectorClient::new(env, oracle_address);
 
-    // XLM is the native asset - we need to get its stellar address
-    // For XLM, we use a special identifier or the contract can accept it as parameter
-    // In testnet, XLM stellar asset would be represented by its address
-    // For now, we'll use a placeholder that needs to be configured
-    // In production, this should be the actual XLM asset address
-
-    // Note: The actual XLM asset address should be stored in contract storage
-    // and set during initialization. For now, we'll create a generic approach.
+    // XLM as a symbol - this works with the CEX/DEX Reflector oracle on testnet
+    // Oracle address: CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63
     let xlm_asset = ReflectorAsset::Other(soroban_sdk::symbol_short!("XLM"));
 
     // Fetch the most recent price
