@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,51 +20,15 @@ export default function Notifications({
     useState<Notification[]>(initialNotifications);
   const [showAll, setShowAll] = useState(false);
 
-  console.log(notifications);
+  // Update notifications when initialNotifications prop changes
+  useEffect(() => {
+    setNotifications(initialNotifications);
+  }, [initialNotifications]);
 
-  const lendingNotifications: Notification[] = [
-    {
-      id: "1",
-      title: "Loan Repaid",
-      message: "Loan #5921 from GXYZ...DEF has been repaid",
-      type: "success",
-      read: false,
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      priority: "low",
-    },
-    {
-      id: "2",
-      title: "Health Warning",
-      message: "Loan #5922 health factor dropped to 1.2",
-      type: "warning",
-      read: false,
-      timestamp: new Date(Date.now() - 7200000).toISOString(),
-      priority: "low",
-    },
-    {
-      id: "3",
-      title: "Interest Earned",
-      message: "You earned $450 in interest from offer #offer_1",
-      type: "success",
-      read: true,
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-      priority: "low",
-    },
-    {
-      id: "4",
-      title: "Overdue Loan",
-      message: "Loan #5920 is now overdue",
-      type: "error",
-      read: true,
-      timestamp: new Date(Date.now() - 172800000).toISOString(),
-      priority: "low",
-    },
-  ];
-
-  const unreadCount = lendingNotifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const displayedNotifications = showAll
-    ? lendingNotifications
-    : lendingNotifications.slice(0, 3);
+    ? notifications
+    : notifications.slice(0, 3);
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
@@ -87,7 +51,7 @@ export default function Notifications({
           {unreadCount > 0 ? <Badge>{unreadCount}</Badge> : <Bullet />}
           Notifications
         </CardTitle>
-        {lendingNotifications.length > 0 && (
+        {notifications.length > 0 && (
           <Button
             className="opacity-50 hover:opacity-100 uppercase"
             size="sm"
@@ -119,7 +83,7 @@ export default function Notifications({
               </motion.div>
             ))}
 
-            {lendingNotifications.length === 0 && (
+            {notifications.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground">
                   No notifications
@@ -127,7 +91,7 @@ export default function Notifications({
               </div>
             )}
 
-            {lendingNotifications.length > 3 && (
+            {notifications.length > 3 && (
               <motion.div
                 layout
                 initial={{ opacity: 0, y: 20 }}
@@ -142,9 +106,7 @@ export default function Notifications({
                   onClick={() => setShowAll(!showAll)}
                   className="w-full"
                 >
-                  {showAll
-                    ? "Show Less"
-                    : `Show All (${lendingNotifications.length})`}
+                  {showAll ? "Show Less" : `Show All (${notifications.length})`}
                 </Button>
               </motion.div>
             )}

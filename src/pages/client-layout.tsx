@@ -8,6 +8,7 @@ import Notifications from "@/components/dashboard/notifications";
 import { useState } from "react";
 import ChevronLeftIcon from "@/components/icons/chevron-left";
 import { useLocation } from "react-router-dom";
+import { useNotifications } from "@/hooks/lending/queries/useNotifications";
 
 const mockData = mockDataJson as MockData;
 
@@ -45,6 +46,9 @@ function DockableLayout({
 }) {
   const [isDocked, setIsDocked] = useState(true);
 
+  // Fetch real notifications based on user's wallet activity
+  const { data: notifications = [] } = useNotifications();
+
   return (
     <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-gap lg:px-sides relative">
       <div className="hidden lg:block col-span-2 top-0 relative">
@@ -66,7 +70,7 @@ function DockableLayout({
           className={`space-y-gap py-sides min-h-screen max-h-screen sticky top-0 overflow-clip transition-all duration-300 ${isDocked ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         >
           <Widget widgetData={mockData.widgetData} />
-          <Notifications initialNotifications={mockData.notifications} />
+          <Notifications initialNotifications={notifications} />
         </div>
       </div>
 
