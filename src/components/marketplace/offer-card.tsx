@@ -14,8 +14,8 @@ interface OfferCardProps {
 
 export default function OfferCard({ offer, view }: OfferCardProps) {
   const navigate = useNavigate();
-  const amountUSDC = Number(offer.amountUSTC) / 1e6;
-  const availableUSDC = Number(offer.availableAmount) / 1e6;
+  const amountUSDC = Number(offer.amountUSTC) / 1e7; // USDC uses 7 decimals
+  const availableUSDC = Number(offer.availableAmount) / 1e7; // USDC uses 7 decimals
 
   // Calculate APY from weekly rate
   const apy = offer.weeklyRate * 52;
