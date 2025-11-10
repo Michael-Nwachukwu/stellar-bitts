@@ -20,11 +20,14 @@
 ## 📋 Table of Contents
 
 - [About The Project](#about-the-project)
+- [How It Works](#how-it-works)
+- [User Roadmap](#user-roadmap)
 - [How We Leveraged Scaffold Stellar](#how-we-leveraged-scaffold-stellar)
 - [Key Features](#key-features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Smart Contracts](#smart-contracts)
+- [Price Oracle Integration](#price-oracle-integration)
 - [Getting Started](#getting-started)
 - [Usage](#usage)
 - [Stellar SDK Integration](#stellar-sdk-integration)
@@ -57,6 +60,202 @@ Traditional lending platforms are centralized, opaque, and often have high barri
 ✅ **Low Cost** - Minimal transaction fees
 ✅ **Global** - Accessible to anyone with a Stellar wallet
 ✅ **Flexible** - Customizable lending terms and rates
+
+---
+
+## 🔄 How It Works
+
+### The Stellar Bits Lending Flywheel
+
+```
+                        ┌──────────────────────────────┐
+                        │   LENDERS DEPOSIT USDC       │
+                        │   (Set Interest Rates)       │
+                        └──────────────┬───────────────┘
+                                      │
+                                      ↓
+                        ┌──────────────────────────────┐
+                        │  OFFERS ADDED TO MARKETPLACE │
+                        │  (Visible to All Borrowers)  │
+                        └──────────────┬───────────────┘
+                                      │
+                                      ↓
+                        ┌──────────────────────────────┐
+                        │  BORROWERS CHOOSE BEST RATES │
+                        │  (Deposit XLM as Collateral) │
+                        └──────────────┬───────────────┘
+                                      │
+                                      ↓
+                        ┌──────────────────────────────┐
+                        │   USDC TRANSFERRED TO LOAN   │
+                        │   (Interest Starts Accruing) │
+                        └──────────────┬───────────────┘
+                                      │
+                                      ↓
+                        ┌──────────────────────────────┐
+                        │  ORACLE MONITORS XLM PRICE   │
+                        │   (Real-time via Reflector)  │
+                        └──────────────┬───────────────┘
+                                      │
+                                      ↓
+                        ┌──────────────────────────────┐
+                        │   HEALTH FACTOR TRACKED      │
+                        │   (Liquidation Protection)   │
+                        └──────────────┬───────────────┘
+                                      │
+                                      ↓
+                        ┌──────────────────────────────┐
+                        │  BORROWER REPAYS + INTEREST  │
+                        │   (XLM Collateral Released)  │
+                        └──────────────┬───────────────┘
+                                      │
+                                      ↓
+                        ┌──────────────────────────────┐
+                        │  LENDERS EARN YIELD & REPEAT │
+                        │   (Continuous Liquidity ♻️)  │
+                        └──────────────────────────────┘
+```
+
+### Key Mechanisms
+
+#### 1. **Collateralization** 🔒
+
+- Borrowers deposit XLM worth 200%+ of loan value
+- Minimum collateral ratio enforced by smart contract
+- Real-time health monitoring prevents undercollateralization
+
+#### 2. **Interest Calculation** 💰
+
+- Per-second simple interest: `Interest = Principal × Rate × Time`
+- Automatic accrual on-chain (no cron jobs needed)
+- Rates set by lenders (0.1% - 30% weekly)
+
+#### 3. **Price Oracle** 📊
+
+- Live XLM/USD prices from Reflector Network
+- 5-minute update frequency
+- 14-decimal precision for accurate calculations
+
+#### 4. **Liquidation Mechanism** ⚠️
+
+- Triggered when health factor < 1.0
+- Liquidators repay debt, receive collateral at discount
+- Protects lenders from bad debt
+
+#### 5. **Position Management** 🎛️
+
+- Add collateral to improve health
+- Partial or full debt repayment
+- Withdraw excess collateral when safe
+
+---
+
+## 🗺️ User Roadmap
+
+### For Lenders: Earn Passive Income
+
+```
+START
+  │
+  ├─► 1. CONNECT WALLET
+  │     └─► Install Freighter
+  │         └─► Approve connection
+  │
+  ├─► 2. FUND WALLET WITH USDC
+  │     └─► Bridge from other chains (optional)
+  │         └─► Or acquire on Stellar DEX
+  │
+  ├─► 3. CREATE LENDING OFFER
+  │     ├─► Navigate to "Create Offer"
+  │     ├─► Set Terms:
+  │     │     • Amount: 100 - 1,000,000 USDC
+  │     │     • Weekly Rate: 0.1% - 30%
+  │     │     • Collateral Ratio: 150% - 300%
+  │     │     • Liquidation Threshold: 120% - 150%
+  │     │     • Max Duration: 1 - 52 weeks
+  │     └─► Approve USDC → Create Offer
+  │
+  ├─► 4. TRACK IN DASHBOARD
+  │     ├─► View active offers
+  │     ├─► Monitor loans against offers
+  │     ├─► Track total interest earned
+  │     └─► See real-time notifications
+  │
+  ├─► 5. MANAGE POSITIONS
+  │     ├─► Withdraw available funds anytime
+  │     ├─► Cancel unused offers
+  │     └─► View loan health status
+  │
+  └─► 6. EARN & COMPOUND
+        └─► Reinvest profits into new offers
+            └─► Build passive income stream 💰
+```
+
+### For Borrowers: Access Instant Liquidity
+
+```
+START
+  │
+  ├─► 1. CONNECT WALLET
+  │     └─► Install Freighter
+  │         └─► Approve connection
+  │
+  ├─► 2. FUND WALLET WITH XLM
+  │     └─► Acquire from exchanges
+  │         └─► Or use Stellar DEX
+  │
+  ├─► 3. BROWSE MARKETPLACE
+  │     ├─► Navigate to "Marketplace"
+  │     ├─► Filter by:
+  │     │     • Interest rate (best first)
+  │     │     • Available amount
+  │     │     • Loan duration
+  │     └─► Compare offers
+  │
+  ├─► 4. BORROW USDC
+  │     ├─► Select best offer
+  │     ├─► Enter:
+  │     │     • XLM collateral amount
+  │     │     • USDC borrow amount
+  │     ├─► View real-time calculations:
+  │     │     • Max borrowable
+  │     │     • Health factor
+  │     │     • Liquidation price
+  │     └─► Approve XLM → Execute Borrow
+  │
+  ├─► 5. USE YOUR USDC
+  │     └─► Trade, invest, or use as needed
+  │         └─► While XLM stays as collateral
+  │
+  ├─► 6. MONITOR POSITION
+  │     ├─► Check health factor daily
+  │     ├─► Watch XLM price movements
+  │     ├─► Get liquidation warnings
+  │     └─► Track accrued interest
+  │
+  ├─► 7. MANAGE RISK
+  │     ├─► Add collateral if health drops
+  │     ├─► Repay partial debt
+  │     └─► Withdraw excess collateral
+  │
+  └─► 8. REPAY & CLOSE
+        ├─► Repay full debt + interest
+        └─► Receive XLM collateral back ✨
+```
+
+### Quick Actions Matrix
+
+| Action             | Lender                | Borrower             |
+| ------------------ | --------------------- | -------------------- |
+| **Create Offer**   | ✅ Set rates & terms  | ❌                   |
+| **Borrow**         | ��                    | ✅ From marketplace  |
+| **Withdraw**       | ✅ Available funds    | ✅ Excess collateral |
+| **Add Collateral** | ❌                    | ✅ Improve health    |
+| **Repay**          | ❌                    | ✅ Partial or full   |
+| **Cancel Offer**   | ✅ If no active loans | ❌                   |
+| **Liquidate**      | ✅ Unhealthy loans    | ❌                   |
+| **Track Earnings** | ✅ Dashboard          | ❌                   |
+| **Monitor Health** | ❌                    | ✅ Real-time         |
 
 ---
 
@@ -103,29 +302,6 @@ npm run dev
 - 🔥 No manual regeneration needed
 - 🔥 Frontend stays in sync with contracts
 
-### 3. **Environment Management** 🌍
-
-Scaffold's `environments.toml` and `.env` configuration made multi-network deployment seamless:
-
-```toml
-# environments.toml - Scaffold Stellar configuration
-[testnet]
-network_passphrase = "Test SDF Network ; September 2015"
-rpc_url = "https://soroban-testnet.stellar.org"
-horizon_url = "https://horizon-testnet.stellar.org"
-
-[mainnet]
-network_passphrase = "Public Global Stellar Network ; September 2015"
-rpc_url = "https://soroban.stellar.org"
-horizon_url = "https://horizon.stellar.org"
-```
-
-**Benefits:**
-
-- ✅ Easy testnet ↔ mainnet switching
-- ✅ Environment-specific contract addresses
-- ✅ Consistent configuration across team
-
 ### 4. **Wallet Integration** 💼
 
 Scaffold's pre-configured wallet integration with `@creit.tech/stellar-wallets-kit` enabled:
@@ -161,7 +337,6 @@ stellar contract deploy \
 **Deployed Contracts:**
 
 - Lending Market: `CALZAKWIDYX4COYTCRYU3PQXO4RV6ZSJRWBQLCF5CENRD2QSWQD52XX6`
-- Mock Oracle: `CA25SV6J6LJS3GYZS6F6I5DH4DJBJGWQXDYTLWFZBZW3F2TJE3P5IV5I`
 - Mock USDC: `CDLMEZPLZ7R625QZMXZFGK4IU2GSF25MC44E4QWTABNXCONF3B3ZNIBN`
 
 ---
@@ -336,13 +511,151 @@ fn transfer(from: Address, to: Address, amount: i128)
 fn approve(from: Address, spender: Address, amount: i128, expiration_ledger: u32)
 ```
 
-### Mock Oracle Contract
+---
 
-**Price feed for XLM/USD conversion**
+## 📊 Price Oracle Integration
+
+Stellar Bits uses **Reflector Network** oracles for real-time XLM/USD price feeds on testnet and mainnet.
+
+### Reflector Network Integration
+
+**Testnet Oracle Addresses:**
+
+| Oracle Type            | Contract Address                                           | Purpose                                      |
+| ---------------------- | ---------------------------------------------------------- | -------------------------------------------- |
+| **CEX/DEX Oracle**     | `CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63` | External market prices (XLM, BTC, ETH, etc.) |
+| **Stellar DEX Oracle** | `CAVLP5DH2GJPZMVO7IJY4CVOD5MWEFTJFVPD2YY2FQXOQHRGHK4D6HLP` | On-chain Stellar DEX prices                  |
+
+**Current Configuration:**
+
+- Using **CEX/DEX Oracle** for native XLM price feeds
+- Asset type: `Asset::Other("XLM")`
+- Price decimals: **14** (Reflector standard)
+- Update frequency: **Every 5 minutes**
+- Current XLM price: ~**$0.27** USD
+
+### Implementation
+
+#### Contract Integration
 
 ```rust
-fn get_price() -> i128  // Returns XLM price in 7 decimals
+// contracts/lending_market/src/oracle.rs
+use crate::reflector::{Asset as ReflectorAsset, PriceData, ReflectorClient};
+
+pub fn get_xlm_price(env: &Env, oracle_address: &Address) -> Result<PriceData, Error> {
+    let client = ReflectorClient::new(env, oracle_address);
+
+    // XLM as symbol (works with CEX/DEX oracle)
+    let xlm_asset = ReflectorAsset::Other(soroban_sdk::symbol_short!("XLM"));
+
+    // Fetch latest price
+    let price_data = client
+        .lastprice(&xlm_asset)
+        .ok_or(Error::PriceNotAvailable)?;
+
+    // Validate price is not stale (5 min threshold)
+    let current_time = env.ledger().timestamp();
+    if current_time - price_data.timestamp > 300 {
+        return Err(Error::StalePriceData);
+    }
+
+    // Sanity check: XLM between $0.01 and $100
+    let decimals = client.decimals(); // 14 decimals
+    let min_price = 10_i128.pow(decimals - 2);
+    let max_price = 100 * 10_i128.pow(decimals);
+
+    if price_data.price < min_price || price_data.price > max_price {
+        return Err(Error::InvalidPriceData);
+    }
+
+    Ok(price_data)
+}
 ```
+
+#### Frontend Integration
+
+```typescript
+// src/hooks/lending/queries/useXlmPrice.ts
+import lendingMarket from "@/contracts/lending_market";
+
+export function useXlmPrice() {
+  return useQuery({
+    queryKey: ["xlm-price"],
+    queryFn: async () => {
+      const priceResult = await lendingMarket.get_xlm_price();
+      return priceResult.result.unwrap();
+    },
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // Refetch every minute
+  });
+}
+
+// Convert from 14 decimals to display format
+export function formatXlmPrice(price: bigint): number {
+  return Number(price) / 1e14;
+}
+```
+
+### Price Validation
+
+The oracle integration includes multiple safety checks:
+
+1. **Staleness Check** - Rejects prices older than 5 minutes
+2. **Range Validation** - Ensures XLM price is within reasonable bounds ($0.01 - $100)
+3. **Positive Value** - Prevents negative prices
+4. **Decimal Precision** - Handles 14-decimal Reflector format correctly
+
+### Updating Oracle Address
+
+The oracle address can be updated by the contract admin without redeployment:
+
+```bash
+stellar contract invoke \
+  --id <LENDING_MARKET_ID> \
+  --source-account admin \
+  --network testnet \
+  -- \
+  set-oracle-address \
+  --admin <ADMIN_ADDRESS> \
+  --oracle CCYOZJCOPG34LLQQ7N24YXBM7LL62R7ONMZ3G6WZAAYPB5OYKOMJRN63
+```
+
+### Available Assets on Reflector Testnet
+
+The CEX/DEX oracle provides prices for:
+
+- **XLM** - Stellar Lumens
+- **BTC** - Bitcoin
+- **ETH** - Ethereum
+- **USDT** - Tether
+- **SOL** - Solana
+- **USDC** - USD Coin
+- **ADA** - Cardano
+- **AVAX** - Avalanche
+- **DOT** - Polkadot
+- **MATIC** - Polygon
+- **LINK** - Chainlink
+- **DAI** - Dai Stablecoin
+- **ATOM** - Cosmos
+- **UNI** - Uniswap
+- **EURC** - Euro Coin
+
+### Benefits of Reflector Integration
+
+✅ **Decentralized** - No single point of failure
+✅ **Real-time** - Updates every 5 minutes
+✅ **Accurate** - Volume-weighted average from multiple sources
+✅ **Reliable** - Maintained by trusted Stellar ecosystem organizations
+✅ **SEP-40 Compatible** - Standard interface across all Stellar oracles
+✅ **Historical Data** - 24-hour price history available
+✅ **Free** - No fees for using public price feeds
+
+### Future Enhancements
+
+- [ ] TWAP (Time-Weighted Average Price) for liquidations
+- [ ] Multi-oracle aggregation for redundancy
+- [ ] Custom asset price feeds
+- [ ] Circuit breaker for extreme price movements
 
 ---
 
@@ -432,104 +745,6 @@ stellar contract invoke \
 
 ---
 
-## 💻 Usage
-
-### For Lenders
-
-1. **Connect Wallet** - Click "Connect" and approve Freighter
-2. **Create Offer** - Navigate to "Create Offer"
-   - Set lending amount (USDC)
-   - Choose weekly interest rate
-   - Set minimum collateral ratio
-   - Define liquidation threshold
-   - Set max loan duration
-3. **Approve & Create** - Approve USDC spending, then create offer
-4. **Manage Offers** - View in Dashboard → My Lending tab
-   - Withdraw available funds
-   - Cancel offers
-
-### For Borrowers
-
-1. **Browse Marketplace** - View all active lending offers
-2. **Select Offer** - Choose based on rate, amount, and terms
-3. **Enter Details**:
-   - XLM collateral amount
-   - USDC borrow amount (up to max borrowable)
-4. **Approve & Borrow** - Approve XLM collateral and execute
-5. **Manage Position** - View in Dashboard → My Borrows
-   - Monitor health factor
-   - Add collateral
-   - Repay debt
-   - Withdraw excess collateral
-
----
-
-## 🔗 Stellar SDK Integration
-
-### Contract Client Generation
-
-Scaffold Stellar automatically generates TypeScript clients:
-
-```typescript
-// Auto-generated from contracts/lending_market/src/lib.rs
-import lendingMarket from "@/contracts/lending_market";
-
-// Full type safety and IntelliSense
-const result = await lendingMarket.create_offer({
-  lender: "GXXX...",
-  usdc_amount: BigInt(10000 * 1e7),
-  weekly_interest_rate: 500, // 5% in basis points
-  min_collateral_ratio: 20000,
-  liquidation_threshold: 12500,
-  max_duration_weeks: 52,
-});
-```
-
-### Transaction Building
-
-Using Stellar SDK with Scaffold's utilities:
-
-```typescript
-import { useWallet } from "@/hooks/useWallet";
-import { useContractClients } from "@/hooks/lending/useContractClients";
-
-const { signTransaction } = useWallet();
-const { lendingMarket } = useContractClients();
-
-// Build and sign transaction
-const tx = await lendingMarket.borrow({
-  borrower: address,
-  offer_id: BigInt(1),
-  collateral_amount: parseXlm("1000"),
-  borrow_amount: parseUsdc("100"),
-});
-
-const result = await tx.signAndSend({ signTransaction });
-```
-
-### Horizon API Integration
-
-Fetching account balances:
-
-```typescript
-import { Horizon } from "@stellar/stellar-sdk";
-
-const horizon = new Horizon.Server("https://horizon-testnet.stellar.org");
-const account = await horizon.accounts().accountId(address).call();
-const xlmBalance = account.balances.find((b) => b.asset_type === "native");
-```
-
-### Price Oracle Integration
-
-```typescript
-import mockOracle from "@/contracts/mock_oracle";
-
-const { result } = await mockOracle.get_price();
-const xlmPrice = Number(result.unwrap()) / 1e7; // Convert from 7 decimals
-```
-
----
-
 ## 📁 Project Structure
 
 ```
@@ -610,33 +825,6 @@ stellar-bits/
 
 ---
 
-## 🗺 Roadmap
-
-### Phase 1: MVP ✅ (Current)
-
-- [x] Core lending/borrowing functionality
-- [x] Health monitoring
-- [x] Position management
-- [x] Dashboard analytics
-- [x] Real-time notifications
-
-### Phase 2: Enhanced Features (Q2 2025)
-
-- [ ] Multi-asset collateral support
-- [ ] Flash loans
-- [ ] Governance token
-- [ ] Liquidation auctions
-- [ ] Advanced analytics
-
-### Phase 3: Mainnet (Q3 2025)
-
-- [ ] Security audits
-- [ ] Mainnet deployment
-- [ ] Insurance fund
-- [ ] Cross-chain bridges
-
----
-
 ## 🤝 Contributing
 
 We welcome contributions! Please follow these steps:
@@ -668,9 +856,9 @@ Special thanks to:
 
 ## 📞 Contact
 
-**Project Maintainer** - [@yourusername](https://twitter.com/yourusername)
+**Project Maintainer** - [@0xchef\_\_](https://x.com/0xchef__)
 
-**Project Link** - [https://github.com/yourusername/stellar-bits](https://github.com/yourusername/stellar-bits)
+**Project Link** - [https://github.com/yourusername/stellar-bitts](https://github.com/yourusername/stellar-bitts)
 
 **Live Demo** - [https://stellar-bits.vercel.app](https://stellar-bits.vercel.app)
 
