@@ -6,12 +6,12 @@
 
 **A decentralized peer-to-peer lending platform built on Stellar blockchain using Scaffold Stellar**
 
-[![Built with Stellar](https://img.shields.io/badge/Built%20with-Stellar-blue)](https://stellar.org)
+[![Built on Stellar](https://img.shields.io/badge/Built%20with-Stellar-blue)](https://stellar.org)
 [![Scaffold Stellar](https://img.shields.io/badge/Scaffold-Stellar-purple)](https://github.com/AhaLabs/scaffold-stellar)
 [![Soroban](https://img.shields.io/badge/Smart%20Contracts-Soroban-green)](https://soroban.stellar.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
 
-[Live Demo](#) | [Documentation](#) | [Report Bug](#) | [Request Feature](#)
+[Live Demo](https://www.loom.com/share/316f182880364902a24d50f62d5dc4be) | [Website](https://stellar-bits.vercel.app/)
 
 </div>
 
@@ -19,7 +19,7 @@
 
 ## 📋 Table of Contents
 
-- [About The Project](#about-the-project)
+- [About The Project](#About-the-project)
 - [How It Works](#how-it-works)
 - [User Roadmap](#user-roadmap)
 - [How We Leveraged Scaffold Stellar](#how-we-leveraged-scaffold-stellar)
@@ -48,7 +48,7 @@
 - **Manage positions** with real-time health monitoring
 - **Track portfolio** with comprehensive analytics
 
-Built entirely on Stellar blockchain using Soroban smart contracts, Stellar Bits demonstrates the power of decentralized finance with instant settlements, low fees, and transparent on-chain lending.
+Built entirely on Stellar blockchain using Stellar scaffold smart contracts, Stellar Bits demonstrates the power of decentralized finance with instant settlements, low fees, and transparent on-chain lending.
 
 ### Why Stellar Bits?
 
